@@ -54,7 +54,7 @@ def compile_source(source: str, filename: str = "<input>", verbose: bool = False
     _vlog(verbose, "Lexing")
     tokens = Lexer(source, filename=filename).tokenize()
     _vlog(verbose, "Parsing")
-    ast = Parser(tokens, filename=filename).parse_program()
+    ast = Parser(tokens, filename=filename, source=source).parse_program()
     _vlog(verbose, "Compiling to WAT/WASM")
     compiler = WasmCompiler()
     wat, wasm = compiler.compile(ast)

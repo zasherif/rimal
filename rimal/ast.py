@@ -17,6 +17,13 @@ class Expr:
 
 
 @dataclass(frozen=True)
+class FunctionDef(Stmt):
+    name: str
+    params: list[str]
+    body: list["Stmt"]
+
+
+@dataclass(frozen=True)
 class Print(Stmt):
     expr: Expr
 
@@ -38,6 +45,21 @@ class If(Stmt):
 class While(Stmt):
     cond: Expr
     body: list[Stmt]
+
+
+@dataclass(frozen=True)
+class Return(Stmt):
+    expr: Expr
+
+
+@dataclass(frozen=True)
+class Break(Stmt):
+    pass
+
+
+@dataclass(frozen=True)
+class Continue(Stmt):
+    pass
 
 
 @dataclass(frozen=True)
@@ -65,4 +87,16 @@ class Binary(Expr):
     op: str
     left: Expr
     right: Expr
+
+
+@dataclass(frozen=True)
+class Unary(Expr):
+    op: str
+    expr: Expr
+
+
+@dataclass(frozen=True)
+class Call(Expr):
+    name: str
+    args: list[Expr]
 

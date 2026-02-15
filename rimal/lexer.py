@@ -44,6 +44,7 @@ class Lexer:
     def tokenize(self) -> list[Token]:
         tokens: list[Token] = []
         indent = _IndentState(stack=[0])
+        paren_depth = 0
 
         lines = self.source.splitlines()
         if self.source.endswith("\n"):
@@ -53,7 +54,13 @@ class Lexer:
         for line_idx, raw_line in enumerate(lines, start=1):
             if "\t" in raw_line:
                 col = raw_line.index("\t") + 1
-                raise LexError("Tabs are forbidden; use spaces for indentation", self.filename, line_idx, col)
+                raise LexError(
+                    "Tabs are forbidden; use spaces for indentation",
+                    self.filename,
+                    line_idx,
+                    col,
+                    line_text=raw_line,
+                )
 
             # Compute indentation (leading spaces).
             i = 0
@@ -73,21 +80,23 @@ class Lexer:
             if rest_no_fmt.lstrip().startswith("#"):
                 continue
 
-            # INDENT/DEDENT handling.
-            if leading > indent.stack[-1]:
-                indent.stack.append(leading)
-                tokens.append(Token(TokenType.INDENT, None, line_idx, 1))
-            elif leading < indent.stack[-1]:
-                while leading < indent.stack[-1]:
-                    indent.stack.pop()
-                    tokens.append(Token(TokenType.DEDENT, None, line_idx, 1))
-                if leading != indent.stack[-1]:
-                    raise LexError(
-                        "Unindent does not match any outer indentation level",
-                        self.filename,
-                        line_idx,
-                        1,
-                    )
+            # INDENT/DEDENT handling (disabled while inside parentheses for line continuation).
+            if paren_depth == 0:
+                if leading > indent.stack[-1]:
+                    indent.stack.append(leading)
+                    tokens.append(Token(TokenType.INDENT, None, line_idx, 1))
+                elif leading < indent.stack[-1]:
+                    while leading < indent.stack[-1]:
+                        indent.stack.pop()
+                        tokens.append(Token(TokenType.DEDENT, None, line_idx, 1))
+                    if leading != indent.stack[-1]:
+                        raise LexError(
+                            "Unindent does not match any outer indentation level",
+                            self.filename,
+                            line_idx,
+                            1,
+                            line_text=raw_line,
+                        )
 
             # Lex the content part.
             col = i + 1
@@ -140,7 +149,13 @@ class Lexer:
                     out_chars: list[str] = []
                     while True:
                         if p >= len(rest):
-                            raise LexError("Unterminated string literal", self.filename, line_idx, start_col)
+                            raise LexError(
+                                "Unterminated string literal",
+                                self.filename,
+                                line_idx,
+                                start_col,
+                                line_text=raw_line,
+                            )
                         c = rest[p]
                         if c == '"':
                             p += 1
@@ -148,7 +163,13 @@ class Lexer:
                             break
                         if c == "\\":
                             if p + 1 >= len(rest):
-                                raise LexError("Unterminated string escape", self.filename, line_idx, col)
+                                raise LexError(
+                                    "Unterminated string escape",
+                                    self.filename,
+                                    line_idx,
+                                    col,
+                                    line_text=raw_line,
+                                )
                             nxt = rest[p + 1]
                             if nxt == "n":
                                 out_chars.append("\n")
@@ -157,7 +178,13 @@ class Lexer:
                             elif nxt == "\\":
                                 out_chars.append("\\")
                             else:
-                                raise LexError(f"Unknown escape: \\{nxt}", self.filename, line_idx, col)
+                                raise LexError(
+                                    f"Unknown escape: \\{nxt}",
+                                    self.filename,
+                                    line_idx,
+                                    col,
+                                    line_text=raw_line,
+                                )
                             p += 2
                             col += 2
                             continue
@@ -193,17 +220,30 @@ class Lexer:
                     "(": TokenType.LPAREN,
                     ")": TokenType.RPAREN,
                     ":": TokenType.COLON,
+                    ",": TokenType.COMMA,
                 }
                 ttype = single_map.get(ch)
                 if ttype is not None:
                     tokens.append(Token(ttype, ch, line_idx, col))
+                    if ttype == TokenType.LPAREN:
+                        paren_depth += 1
+                    elif ttype == TokenType.RPAREN:
+                        paren_depth = max(0, paren_depth - 1)
                     p += 1
                     col += 1
                     continue
 
-                raise LexError(f"Unexpected character: {ch!r}", self.filename, line_idx, col)
+                raise LexError(
+                    f"Unexpected character: {ch!r}",
+                    self.filename,
+                    line_idx,
+                    col,
+                    line_text=raw_line,
+                )
 
-            tokens.append(Token(TokenType.NEWLINE, None, line_idx, len(raw_line) + 1))
+            # NEWLINE ends a logical line only if we're not inside parentheses.
+            if paren_depth == 0:
+                tokens.append(Token(TokenType.NEWLINE, None, line_idx, len(raw_line) + 1))
 
         # Dedent to zero at EOF
         eof_line = len(lines) if lines else 1

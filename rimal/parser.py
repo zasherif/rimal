@@ -5,10 +5,18 @@ from .token import ParseError, Token, TokenType
 
 
 class Parser:
-    def __init__(self, tokens: list[Token], filename: str = "<input>") -> None:
+    def __init__(self, tokens: list[Token], filename: str = "<input>", source: str | None = None) -> None:
         self.tokens = tokens
         self.filename = filename
+        self._lines = source.splitlines() if source is not None else None
         self.i = 0
+
+    def _line_text(self, line: int) -> str | None:
+        if self._lines is None:
+            return None
+        if line <= 0 or line > len(self._lines):
+            return None
+        return self._lines[line - 1]
 
     def _cur(self) -> Token:
         return self.tokens[self.i]
@@ -20,7 +28,7 @@ class Parser:
         tok = self._cur()
         if tok.type != t:
             msg = message or f"Expected {t.value}, got {tok.type.value}"
-            raise ParseError(msg, self.filename, tok.line, tok.col)
+            raise ParseError(msg, self.filename, tok.line, tok.col, line_text=self._line_text(tok.line))
         self.i += 1
         return tok
 
@@ -39,17 +47,53 @@ class Parser:
             if self._at(TokenType.DEDENT):
                 # Defensive: blocks consume DEDENT, top-level should not see it.
                 tok = self._cur()
-                raise ParseError("Unexpected dedent", self.filename, tok.line, tok.col)
+                raise ParseError(
+                    "Unexpected dedent",
+                    self.filename,
+                    tok.line,
+                    tok.col,
+                    line_text=self._line_text(tok.line),
+                )
             stmts.append(self._parse_stmt())
         return ast.Program(stmts)
 
     def _parse_stmt(self) -> ast.Stmt:
         tok = self._cur()
 
+        if self._match(TokenType.DEF):
+            name_tok = self._eat(TokenType.IDENT, "Expected function name after 'دالة'")
+            self._eat(TokenType.LPAREN, "Expected '(' after function name")
+            params: list[str] = []
+            if not self._at(TokenType.RPAREN):
+                while True:
+                    p = self._eat(TokenType.IDENT, "Expected parameter name").value
+                    params.append(str(p))
+                    if self._match(TokenType.COMMA):
+                        continue
+                    break
+            self._eat(TokenType.RPAREN, "Expected ')'")
+            self._eat(TokenType.COLON, "Expected ':' after function signature")
+            self._eat(TokenType.NEWLINE, "Expected newline after ':'")
+            body = self._parse_block()
+            return ast.FunctionDef(str(name_tok.value), params, body)
+
         if self._match(TokenType.PRINT):
             expr = self._parse_expr()
             self._eat(TokenType.NEWLINE, "Expected end of line after print")
             return ast.Print(expr)
+
+        if self._match(TokenType.RETURN):
+            expr = self._parse_expr()
+            self._eat(TokenType.NEWLINE, "Expected end of line after return")
+            return ast.Return(expr)
+
+        if self._match(TokenType.BREAK):
+            self._eat(TokenType.NEWLINE, "Expected end of line after break")
+            return ast.Break()
+
+        if self._match(TokenType.CONTINUE):
+            self._eat(TokenType.NEWLINE, "Expected end of line after continue")
+            return ast.Continue()
 
         if self._match(TokenType.IF):
             cond = self._parse_expr()
@@ -59,9 +103,22 @@ class Parser:
 
             else_body: list[ast.Stmt] | None = None
             if self._match(TokenType.ELSE):
-                self._eat(TokenType.COLON, "Expected ':' after else")
-                self._eat(TokenType.NEWLINE, "Expected newline after ':'")
-                else_body = self._parse_block()
+                # Support "وإلا اذا" as elif by nesting an If inside else.
+                if self._match(TokenType.IF):
+                    elif_cond = self._parse_expr()
+                    self._eat(TokenType.COLON, "Expected ':' after if condition")
+                    self._eat(TokenType.NEWLINE, "Expected newline after ':'")
+                    elif_then = self._parse_block()
+                    elif_else: list[ast.Stmt] | None = None
+                    if self._match(TokenType.ELSE):
+                        self._eat(TokenType.COLON, "Expected ':' after else")
+                        self._eat(TokenType.NEWLINE, "Expected newline after ':'")
+                        elif_else = self._parse_block()
+                    else_body = [ast.If(elif_cond, elif_then, elif_else)]
+                else:
+                    self._eat(TokenType.COLON, "Expected ':' after else")
+                    self._eat(TokenType.NEWLINE, "Expected newline after ':'")
+                    else_body = self._parse_block()
             return ast.If(cond, then_body, else_body)
 
         if self._match(TokenType.WHILE):
@@ -75,17 +132,35 @@ class Parser:
         if self._at(TokenType.IDENT):
             name_tok = self._eat(TokenType.IDENT)
             if not self._match(TokenType.ASSIGN):
-                raise ParseError("Expected '=' after identifier", self.filename, name_tok.line, name_tok.col)
+                raise ParseError(
+                    "Expected '=' after identifier",
+                    self.filename,
+                    name_tok.line,
+                    name_tok.col,
+                    line_text=self._line_text(name_tok.line),
+                )
             expr = self._parse_expr()
             self._eat(TokenType.NEWLINE, "Expected end of line after assignment")
             return ast.Assign(str(name_tok.value), expr)
 
-        raise ParseError(f"Unexpected token: {tok.type.value}", self.filename, tok.line, tok.col)
+        raise ParseError(
+            f"Unexpected token: {tok.type.value}",
+            self.filename,
+            tok.line,
+            tok.col,
+            line_text=self._line_text(tok.line),
+        )
 
     def _parse_block(self) -> list[ast.Stmt]:
         if not self._match(TokenType.INDENT):
             tok = self._cur()
-            raise ParseError("Expected an indented block", self.filename, tok.line, tok.col)
+            raise ParseError(
+                "Expected an indented block",
+                self.filename,
+                tok.line,
+                tok.col,
+                line_text=self._line_text(tok.line),
+            )
 
         stmts: list[ast.Stmt] = []
         while True:
@@ -95,7 +170,13 @@ class Parser:
                 break
             if self._at(TokenType.EOF):
                 tok = self._cur()
-                raise ParseError("Unexpected end of file in block", self.filename, tok.line, tok.col)
+                raise ParseError(
+                    "Unexpected end of file in block",
+                    self.filename,
+                    tok.line,
+                    tok.col,
+                    line_text=self._line_text(tok.line),
+                )
             stmts.append(self._parse_stmt())
         if not stmts:
             # Minimal language: empty blocks are likely a mistake.
@@ -106,10 +187,13 @@ class Parser:
     # Expression parsing (precedence climbing)
     #
     # precedence:
+    #   or:  OR
+    #   and: AND
     #   comparison: == != < > <= >=
     #   add: + -
     #   mul: * /
-    #   primary: literals, vars, (expr)
+    #   unary: NOT
+    #   primary: literals, vars, calls, (expr)
 
     _COMP = {
         TokenType.EQEQ,
@@ -142,6 +226,29 @@ class Parser:
         return s
 
     def _parse_expr(self) -> ast.Expr:
+        return self._parse_or()
+
+    def _parse_or(self) -> ast.Expr:
+        expr = self._parse_and()
+        while True:
+            tok = self._match(TokenType.OR)
+            if tok is None:
+                break
+            rhs = self._parse_and()
+            expr = ast.Binary("or", expr, rhs)
+        return expr
+
+    def _parse_and(self) -> ast.Expr:
+        expr = self._parse_cmp()
+        while True:
+            tok = self._match(TokenType.AND)
+            if tok is None:
+                break
+            rhs = self._parse_cmp()
+            expr = ast.Binary("and", expr, rhs)
+        return expr
+
+    def _parse_cmp(self) -> ast.Expr:
         left = self._parse_add()
         if self._cur().type in self._COMP:
             op_tok = self._cur()
@@ -161,14 +268,20 @@ class Parser:
         return expr
 
     def _parse_mul(self) -> ast.Expr:
-        expr = self._parse_primary()
+        expr = self._parse_unary()
         while True:
             tok = self._match(TokenType.STAR, TokenType.SLASH)
             if tok is None:
                 break
-            rhs = self._parse_primary()
+            rhs = self._parse_unary()
             expr = ast.Binary(self._op_str(tok), expr, rhs)
         return expr
+
+    def _parse_unary(self) -> ast.Expr:
+        if self._match(TokenType.NOT):
+            inner = self._parse_unary()
+            return ast.Unary("not", inner)
+        return self._parse_primary()
 
     def _parse_primary(self) -> ast.Expr:
         tok = self._cur()
@@ -182,11 +295,28 @@ class Parser:
         if self._match(TokenType.FALSE):
             return ast.BoolLit(False)
         if self._match(TokenType.IDENT):
-            return ast.Var(str(tok.value))
+            name = str(tok.value)
+            if self._match(TokenType.LPAREN):
+                args: list[ast.Expr] = []
+                if not self._at(TokenType.RPAREN):
+                    while True:
+                        args.append(self._parse_expr())
+                        if self._match(TokenType.COMMA):
+                            continue
+                        break
+                self._eat(TokenType.RPAREN, "Expected ')'")
+                return ast.Call(name, args)
+            return ast.Var(name)
         if self._match(TokenType.LPAREN):
             inner = self._parse_expr()
             self._eat(TokenType.RPAREN, "Expected ')'")
             return inner
 
-        raise ParseError(f"Unexpected token in expression: {tok.type.value}", self.filename, tok.line, tok.col)
+        raise ParseError(
+            f"Unexpected token in expression: {tok.type.value}",
+            self.filename,
+            tok.line,
+            tok.col,
+            line_text=self._line_text(tok.line),
+        )
 

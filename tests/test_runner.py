@@ -43,6 +43,12 @@ def run_tests() -> int:
         TestCase("If/Else", TEST_PROGRAMS / "if_else.rml", "١٠\n"),
         TestCase("While Loop", TEST_PROGRAMS / "while_loop.rml", "٠\n١\n٢\n"),
         TestCase("Comments", TEST_PROGRAMS / "comments.rml", "٠\n١\n٢\n"),
+        TestCase("Boolean Ops", TEST_PROGRAMS / "boolean_ops.rml", "٠\n١\n١\n١\n"),
+        TestCase("Elif Chain", TEST_PROGRAMS / "elif_chain.rml", "٢٠\n"),
+        TestCase("Break/Continue", TEST_PROGRAMS / "break_continue.rml", "١\n٣\n"),
+        TestCase("Multiline Expr", TEST_PROGRAMS / "multiline_expr.rml", "١٤\n"),
+        TestCase("Nested Parens", TEST_PROGRAMS / "nested_parens.rml", "٤٨\n"),
+        TestCase("Functions", TEST_PROGRAMS / "functions_basic.rml", "٥\n١٤\n"),
         TestCase("Strings", TEST_PROGRAMS / "strings.rml", "مرحبا\n"),
         TestCase(
             "Invalid Syntax",

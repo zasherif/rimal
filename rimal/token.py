@@ -21,8 +21,15 @@ class TokenType(str, Enum):
     IF = "IF"  # اذا
     ELSE = "ELSE"  # وإلا
     WHILE = "WHILE"  # بينما
+    DEF = "DEF"  # دالة
+    RETURN = "RETURN"  # ارجع
+    BREAK = "BREAK"  # اكسر
+    CONTINUE = "CONTINUE"  # تابع
     TRUE = "TRUE"  # صح
     FALSE = "FALSE"  # خطأ
+    AND = "AND"  # و
+    OR = "OR"  # أو / او
+    NOT = "NOT"  # ليس
 
     # Operators / punctuation
     ASSIGN = "="
@@ -41,6 +48,7 @@ class TokenType(str, Enum):
     LPAREN = "("
     RPAREN = ")"
     COLON = ":"
+    COMMA = ","
 
 
 KEYWORDS: dict[str, TokenType] = {
@@ -48,8 +56,16 @@ KEYWORDS: dict[str, TokenType] = {
     "اذا": TokenType.IF,
     "وإلا": TokenType.ELSE,
     "بينما": TokenType.WHILE,
+    "دالة": TokenType.DEF,
+    "ارجع": TokenType.RETURN,
+    "اكسر": TokenType.BREAK,
+    "تابع": TokenType.CONTINUE,
     "صح": TokenType.TRUE,
     "خطأ": TokenType.FALSE,
+    "و": TokenType.AND,
+    "او": TokenType.OR,
+    "أو": TokenType.OR,
+    "ليس": TokenType.NOT,
 }
 
 
@@ -74,11 +90,19 @@ class RimalError(Exception):
 
 
 class LexError(RimalError):
-    def __init__(self, message: str, filename: str, line: int, col: int) -> None:
-        super().__init__(f"{filename}:{line}:{col}: {message}")
+    def __init__(self, message: str, filename: str, line: int, col: int, line_text: str | None = None) -> None:
+        col = max(1, int(col))
+        base = f"{filename}:{line}:{col}: {message}"
+        if line_text is not None:
+            base += f"\n  {line_text}\n  {' ' * (col - 1)}^"
+        super().__init__(base)
 
 
 class ParseError(RimalError):
-    def __init__(self, message: str, filename: str, line: int, col: int) -> None:
-        super().__init__(f"{filename}:{line}:{col}: {message}")
+    def __init__(self, message: str, filename: str, line: int, col: int, line_text: str | None = None) -> None:
+        col = max(1, int(col))
+        base = f"{filename}:{line}:{col}: {message}"
+        if line_text is not None:
+            base += f"\n  {line_text}\n  {' ' * (col - 1)}^"
+        super().__init__(base)
 

@@ -1,4 +1,4 @@
-# Rimal (v0.1)
+# Rimal (v0.2)
 
 Rimal is a minimal Arabic language that compiles to WebAssembly.
 
@@ -9,18 +9,33 @@ Rimal is a minimal Arabic language that compiles to WebAssembly.
 - **Runtime**: Wasmtime (no WASI)
 - **Types**: `i32`, booleans, string literals (print-only)
 
-## Language (v0.1) — Grammar Summary
+## Language (v0.2) — Grammar Summary
 
 ### Statements
 
+- **Function definition**:
+
+```
+دالة <name>(<params...>):
+    <statements>
+```
+
 - **Print**: `اطبع <expr-or-string>`
 - **Assignment**: `<identifier> = <expr>`
+- **Return**: `ارجع <expr>`
 - **If/Else**:
 
 ```
 اذا <expr>:
     <statements>
 وإلا:
+    <statements>
+```
+
+- **Elif**:
+
+```
+وإلا اذا <expr>:
     <statements>
 ```
 
@@ -31,18 +46,25 @@ Rimal is a minimal Arabic language that compiles to WebAssembly.
     <statements>
 ```
 
+- **Loop control**:
+  - `اكسر` (break)
+  - `تابع` (continue)
+
 ### Expressions
 
 - Literals: integers, `صح`, `خطأ`, string literals (`"..."` only for `اطبع`)
 - Variables: implicitly declared on first assignment (all compile to `i32` locals)
 - Operators: `+ - * /` and comparisons `== != < > <= >=`
 - Parentheses: `( ... )`
+- Boolean ops: `و` (and), `أو`/`او` (or), `ليس` (not)
+- Function calls: `<name>(<args...>)`
 - **Digits**: Arabic-Indic digits are supported in source (e.g. `١٢٣`). For readability, printed `i32` values are also rendered using Arabic-Indic digits.
 
 ### Blocks / Indentation
 
 - Indentation-based blocks using **spaces only**
 - **Tabs are forbidden**
+- Newlines inside parentheses do not end statements (line continuation).
 - **RTL display tip**: RTL/LTR rendering is controlled by your editor/terminal. Rimal ignores Unicode bidi formatting marks (LRM/RLM/etc.) if you need to insert them for display, but the recommended approach is enabling RTL editing support in your editor for `.rml` files.
 
 ## Architecture
