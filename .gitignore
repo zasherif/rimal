@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.python-version
+
+*.wat
+*.wasm
+
+.DS_Store

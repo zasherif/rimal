@@ -1,0 +1,17 @@
+#!/bin/sh
+# Rimal CLI launcher.
+# Prefers python3.11 (project target), falls back to python3.
+
+DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+
+if command -v python3.11 >/dev/null 2>&1; then
+  exec python3.11 "$DIR/rml.py" "$@"
+fi
+
+if command -v python3 >/dev/null 2>&1; then
+  exec python3 "$DIR/rml.py" "$@"
+fi
+
+echo "python3.11 (or python3) not found" >&2
+exit 127
+

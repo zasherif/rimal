@@ -1,0 +1,39 @@
+{
+  "name": "rml-rtl-editor",
+  "displayName": "RML RTL Editor",
+  "description": "Dedicated RTL editor (webview) for Rimal .rml files.",
+  "version": "0.0.1",
+  "publisher": "rimal",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./extension.js",
+  "activationEvents": [
+    "onCustomEditor:rimal.rmlRtlEditor",
+    "onCommand:rimal.rml.openRtlEditor"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "rimal.rml.openRtlEditor",
+        "title": "RML: Reopen Active File in RTL Editor"
+      }
+    ],
+    "customEditors": [
+      {
+        "viewType": "rimal.rmlRtlEditor",
+        "displayName": "RML RTL Editor",
+        "selector": [
+          {
+            "filenamePattern": "*.rml"
+          }
+        ],
+        "priority": "option"
+      }
+    ]
+  }
+}
+
