@@ -61,41 +61,66 @@ class Parser:
         tok = self._cur()
 
         if self._match(TokenType.DEF):
+            def_tok = tok
             name_tok = self._eat(TokenType.IDENT, "Expected function name after 'دالة'")
             self._eat(TokenType.LPAREN, "Expected '(' after function name")
-            params: list[str] = []
+            params: list[ast.Param] = []
             if not self._at(TokenType.RPAREN):
                 while True:
-                    p = self._eat(TokenType.IDENT, "Expected parameter name").value
-                    params.append(str(p))
+                    p_tok = self._eat(TokenType.IDENT, "Expected parameter name")
+                    self._eat(TokenType.COLON, "Expected ':' after parameter name")
+                    tname = self._parse_type_name()
+                    params.append(ast.Param(str(p_tok.value), tname, p_tok.line, p_tok.col))
                     if self._match(TokenType.COMMA):
                         continue
                     break
             self._eat(TokenType.RPAREN, "Expected ')'")
+            self._eat(TokenType.ARROW, "Expected '->' before return type")
+            return_type = self._parse_type_name()
             self._eat(TokenType.COLON, "Expected ':' after function signature")
             self._eat(TokenType.NEWLINE, "Expected newline after ':'")
             body = self._parse_block()
-            return ast.FunctionDef(str(name_tok.value), params, body)
+            return ast.FunctionDef(str(name_tok.value), params, return_type, body, def_tok.line, def_tok.col)
 
         if self._match(TokenType.PRINT):
+            p_tok = tok
             expr = self._parse_expr()
             self._eat(TokenType.NEWLINE, "Expected end of line after print")
-            return ast.Print(expr)
+            return ast.Print(expr, p_tok.line, p_tok.col)
+
+        if self._match(TokenType.ASSERT):
+            a_tok = tok
+            expr = self._parse_expr()
+            self._eat(TokenType.NEWLINE, "Expected end of line after assert")
+            return ast.Assert(expr, a_tok.line, a_tok.col)
+
+        if self._match(TokenType.LET) or self._match(TokenType.VAR):
+            decl_tok = tok
+            mutable = decl_tok.type == TokenType.VAR
+            name_tok = self._eat(TokenType.IDENT, "Expected identifier after declaration")
+            self._eat(TokenType.COLON, "Expected ':' after identifier")
+            tname = self._parse_type_name()
+            self._eat(TokenType.ASSIGN, "Expected '=' in declaration")
+            expr = self._parse_expr()
+            self._eat(TokenType.NEWLINE, "Expected end of line after declaration")
+            return ast.VarDecl(str(name_tok.value), tname, mutable, expr, decl_tok.line, decl_tok.col)
 
         if self._match(TokenType.RETURN):
+            r_tok = tok
             expr = self._parse_expr()
             self._eat(TokenType.NEWLINE, "Expected end of line after return")
-            return ast.Return(expr)
+            return ast.Return(expr, r_tok.line, r_tok.col)
 
         if self._match(TokenType.BREAK):
             self._eat(TokenType.NEWLINE, "Expected end of line after break")
-            return ast.Break()
+            return ast.Break(tok.line, tok.col)
 
         if self._match(TokenType.CONTINUE):
             self._eat(TokenType.NEWLINE, "Expected end of line after continue")
-            return ast.Continue()
+            return ast.Continue(tok.line, tok.col)
 
         if self._match(TokenType.IF):
+            if_tok = tok
             cond = self._parse_expr()
             self._eat(TokenType.COLON, "Expected ':' after if condition")
             self._eat(TokenType.NEWLINE, "Expected newline after ':'")
@@ -105,6 +130,7 @@ class Parser:
             if self._match(TokenType.ELSE):
                 # Support "وإلا اذا" as elif by nesting an If inside else.
                 if self._match(TokenType.IF):
+                    elif_if_tok = self.tokens[self.i - 1]
                     elif_cond = self._parse_expr()
                     self._eat(TokenType.COLON, "Expected ':' after if condition")
                     self._eat(TokenType.NEWLINE, "Expected newline after ':'")
@@ -114,19 +140,20 @@ class Parser:
                         self._eat(TokenType.COLON, "Expected ':' after else")
                         self._eat(TokenType.NEWLINE, "Expected newline after ':'")
                         elif_else = self._parse_block()
-                    else_body = [ast.If(elif_cond, elif_then, elif_else)]
+                    else_body = [ast.If(elif_cond, elif_then, elif_else, elif_if_tok.line, elif_if_tok.col)]
                 else:
                     self._eat(TokenType.COLON, "Expected ':' after else")
                     self._eat(TokenType.NEWLINE, "Expected newline after ':'")
                     else_body = self._parse_block()
-            return ast.If(cond, then_body, else_body)
+            return ast.If(cond, then_body, else_body, if_tok.line, if_tok.col)
 
         if self._match(TokenType.WHILE):
+            w_tok = tok
             cond = self._parse_expr()
             self._eat(TokenType.COLON, "Expected ':' after while condition")
             self._eat(TokenType.NEWLINE, "Expected newline after ':'")
             body = self._parse_block()
-            return ast.While(cond, body)
+            return ast.While(cond, body, w_tok.line, w_tok.col)
 
         # Assignment: IDENT '=' expr NEWLINE
         if self._at(TokenType.IDENT):
@@ -141,7 +168,7 @@ class Parser:
                 )
             expr = self._parse_expr()
             self._eat(TokenType.NEWLINE, "Expected end of line after assignment")
-            return ast.Assign(str(name_tok.value), expr)
+            return ast.Assign(str(name_tok.value), expr, name_tok.line, name_tok.col)
 
         raise ParseError(
             f"Unexpected token: {tok.type.value}",
@@ -235,7 +262,7 @@ class Parser:
             if tok is None:
                 break
             rhs = self._parse_and()
-            expr = ast.Binary("or", expr, rhs)
+            expr = ast.Binary("or", expr, rhs, tok.line, tok.col)
         return expr
 
     def _parse_and(self) -> ast.Expr:
@@ -245,7 +272,7 @@ class Parser:
             if tok is None:
                 break
             rhs = self._parse_cmp()
-            expr = ast.Binary("and", expr, rhs)
+            expr = ast.Binary("and", expr, rhs, tok.line, tok.col)
         return expr
 
     def _parse_cmp(self) -> ast.Expr:
@@ -254,7 +281,7 @@ class Parser:
             op_tok = self._cur()
             self.i += 1
             right = self._parse_add()
-            return ast.Binary(self._op_str(op_tok), left, right)
+            return ast.Binary(self._op_str(op_tok), left, right, op_tok.line, op_tok.col)
         return left
 
     def _parse_add(self) -> ast.Expr:
@@ -264,7 +291,7 @@ class Parser:
             if tok is None:
                 break
             rhs = self._parse_mul()
-            expr = ast.Binary(self._op_str(tok), expr, rhs)
+            expr = ast.Binary(self._op_str(tok), expr, rhs, tok.line, tok.col)
         return expr
 
     def _parse_mul(self) -> ast.Expr:
@@ -274,26 +301,27 @@ class Parser:
             if tok is None:
                 break
             rhs = self._parse_unary()
-            expr = ast.Binary(self._op_str(tok), expr, rhs)
+            expr = ast.Binary(self._op_str(tok), expr, rhs, tok.line, tok.col)
         return expr
 
     def _parse_unary(self) -> ast.Expr:
-        if self._match(TokenType.NOT):
+        not_tok = self._match(TokenType.NOT)
+        if not_tok is not None:
             inner = self._parse_unary()
-            return ast.Unary("not", inner)
+            return ast.Unary("not", inner, not_tok.line, not_tok.col)
         return self._parse_primary()
 
     def _parse_primary(self) -> ast.Expr:
         tok = self._cur()
 
         if self._match(TokenType.INT):
-            return ast.IntLit(int(tok.value))  # type: ignore[arg-type]
+            return ast.IntLit(int(tok.value), tok.line, tok.col)  # type: ignore[arg-type]
         if self._match(TokenType.STRING):
-            return ast.StrLit(str(tok.value))
+            return ast.StrLit(str(tok.value), tok.line, tok.col)
         if self._match(TokenType.TRUE):
-            return ast.BoolLit(True)
+            return ast.BoolLit(True, tok.line, tok.col)
         if self._match(TokenType.FALSE):
-            return ast.BoolLit(False)
+            return ast.BoolLit(False, tok.line, tok.col)
         if self._match(TokenType.IDENT):
             name = str(tok.value)
             if self._match(TokenType.LPAREN):
@@ -305,8 +333,8 @@ class Parser:
                             continue
                         break
                 self._eat(TokenType.RPAREN, "Expected ')'")
-                return ast.Call(name, args)
-            return ast.Var(name)
+                return ast.Call(name, args, tok.line, tok.col)
+            return ast.Var(name, tok.line, tok.col)
         if self._match(TokenType.LPAREN):
             inner = self._parse_expr()
             self._eat(TokenType.RPAREN, "Expected ')'")
@@ -314,6 +342,20 @@ class Parser:
 
         raise ParseError(
             f"Unexpected token in expression: {tok.type.value}",
+            self.filename,
+            tok.line,
+            tok.col,
+            line_text=self._line_text(tok.line),
+        )
+
+    def _parse_type_name(self) -> str:
+        tok = self._cur()
+        if self._match(TokenType.TYPE_I32):
+            return "i32"
+        if self._match(TokenType.TYPE_BOOL):
+            return "bool"
+        raise ParseError(
+            "Expected type name (عدد32 or منطقي)",
             self.filename,
             tok.line,
             tok.col,

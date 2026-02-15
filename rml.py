@@ -18,6 +18,7 @@ import wasmtime
 
 from rimal.lexer import Lexer
 from rimal.parser import Parser
+from rimal.typechecker import TypeChecker
 from rimal.wasm_compiler import WasmCompiler
 
 _ARABIC_INDIC_DIGITS = str.maketrans("0123456789", "٠١٢٣٤٥٦٧٨٩")
@@ -55,9 +56,12 @@ def compile_source(source: str, filename: str = "<input>", verbose: bool = False
     tokens = Lexer(source, filename=filename).tokenize()
     _vlog(verbose, "Parsing")
     ast = Parser(tokens, filename=filename, source=source).parse_program()
+    _vlog(verbose, "Type checking")
+    tc = TypeChecker(ast, filename=filename, source=source)
+    tc.check()
     _vlog(verbose, "Compiling to WAT/WASM")
     compiler = WasmCompiler()
-    wat, wasm = compiler.compile(ast)
+    wat, wasm = compiler.compile(ast, print_types=tc.print_types)
     return wat, wasm
 
 

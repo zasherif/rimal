@@ -30,6 +30,11 @@ class TokenType(str, Enum):
     AND = "AND"  # و
     OR = "OR"  # أو / او
     NOT = "NOT"  # ليس
+    LET = "LET"  # دع
+    VAR = "VAR"  # متغير
+    TYPE_I32 = "TYPE_I32"  # عدد32
+    TYPE_BOOL = "TYPE_BOOL"  # منطقي
+    ASSERT = "ASSERT"  # تأكد
 
     # Operators / punctuation
     ASSIGN = "="
@@ -49,6 +54,7 @@ class TokenType(str, Enum):
     RPAREN = ")"
     COLON = ":"
     COMMA = ","
+    ARROW = "->"
 
 
 KEYWORDS: dict[str, TokenType] = {
@@ -66,6 +72,11 @@ KEYWORDS: dict[str, TokenType] = {
     "او": TokenType.OR,
     "أو": TokenType.OR,
     "ليس": TokenType.NOT,
+    "دع": TokenType.LET,
+    "متغير": TokenType.VAR,
+    "عدد32": TokenType.TYPE_I32,
+    "منطقي": TokenType.TYPE_BOOL,
+    "تأكد": TokenType.ASSERT,
 }
 
 
@@ -99,6 +110,15 @@ class LexError(RimalError):
 
 
 class ParseError(RimalError):
+    def __init__(self, message: str, filename: str, line: int, col: int, line_text: str | None = None) -> None:
+        col = max(1, int(col))
+        base = f"{filename}:{line}:{col}: {message}"
+        if line_text is not None:
+            base += f"\n  {line_text}\n  {' ' * (col - 1)}^"
+        super().__init__(base)
+
+
+class SemanticError(RimalError):
     def __init__(self, message: str, filename: str, line: int, col: int, line_text: str | None = None) -> None:
         col = max(1, int(col))
         base = f"{filename}:{line}:{col}: {message}"

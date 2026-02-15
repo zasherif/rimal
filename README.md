@@ -1,4 +1,4 @@
-# Rimal (v0.2)
+# Rimal (v0.3)
 
 Rimal is a minimal Arabic language that compiles to WebAssembly.
 
@@ -9,19 +9,22 @@ Rimal is a minimal Arabic language that compiles to WebAssembly.
 - **Runtime**: Wasmtime (no WASI)
 - **Types**: `i32`, booleans, string literals (print-only)
 
-## Language (v0.2) — Grammar Summary
+## Language (v0.3) — Grammar Summary
 
 ### Statements
 
 - **Function definition**:
 
 ```
-دالة <name>(<params...>):
+دالة <name>(<params...>) -> <type>:
     <statements>
 ```
 
 - **Print**: `اطبع <expr-or-string>`
-- **Assignment**: `<identifier> = <expr>`
+- **Assert**: `تأكد <expr>` (traps if false; useful for tests)
+- **Declaration (immutable)**: `دع <identifier>: <type> = <expr>`
+- **Declaration (mutable)**: `متغير <identifier>: <type> = <expr>`
+- **Assignment**: `<identifier> = <expr>` (mutable bindings only)
 - **Return**: `ارجع <expr>`
 - **If/Else**:
 
@@ -53,12 +56,15 @@ Rimal is a minimal Arabic language that compiles to WebAssembly.
 ### Expressions
 
 - Literals: integers, `صح`, `خطأ`, string literals (`"..."` only for `اطبع`)
-- Variables: implicitly declared on first assignment (all compile to `i32` locals)
+- Variables: must be declared before use
 - Operators: `+ - * /` and comparisons `== != < > <= >=`
 - Parentheses: `( ... )`
 - Boolean ops: `و` (and), `أو`/`او` (or), `ليس` (not)
 - Function calls: `<name>(<args...>)`
 - **Digits**: Arabic-Indic digits are supported in source (e.g. `١٢٣`). For readability, printed `i32` values are also rendered using Arabic-Indic digits.
+
+Notes:
+- Printing `منطقي` values displays `صح` / `خطأ` (while they are still represented as `i32` internally).
 
 ### Blocks / Indentation
 

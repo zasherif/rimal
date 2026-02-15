@@ -196,12 +196,13 @@ class Lexer:
 
                 # Two-char operators
                 two = rest[p : p + 2]
-                if two in ("==", "!=", "<=", ">="):
+                if two in ("==", "!=", "<=", ">=", "->"):
                     t = {
                         "==": TokenType.EQEQ,
                         "!=": TokenType.NEQ,
                         "<=": TokenType.LTE,
                         ">=": TokenType.GTE,
+                        "->": TokenType.ARROW,
                     }[two]
                     tokens.append(Token(t, two, line_idx, col))
                     p += 2
