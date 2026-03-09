@@ -355,7 +355,7 @@ class Parser:
         if self._match(TokenType.TYPE_BOOL):
             return "bool"
         raise ParseError(
-            "Expected type name (عدد32 or منطقي)",
+            "Expected type name (عدد٣٢ or منطقي)",
             self.filename,
             tok.line,
             tok.col,

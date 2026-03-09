@@ -32,7 +32,7 @@ class TokenType(str, Enum):
     NOT = "NOT"  # ليس
     LET = "LET"  # دع
     VAR = "VAR"  # متغير
-    TYPE_I32 = "TYPE_I32"  # عدد32
+    TYPE_I32 = "TYPE_I32"  # عدد٣٢
     TYPE_BOOL = "TYPE_BOOL"  # منطقي
     ASSERT = "ASSERT"  # تأكد
 
@@ -74,7 +74,7 @@ KEYWORDS: dict[str, TokenType] = {
     "ليس": TokenType.NOT,
     "دع": TokenType.LET,
     "متغير": TokenType.VAR,
-    "عدد32": TokenType.TYPE_I32,
+    "عدد٣٢": TokenType.TYPE_I32,
     "منطقي": TokenType.TYPE_BOOL,
     "تأكد": TokenType.ASSERT,
 }

@@ -45,7 +45,7 @@ Rimal v0.3 introduces a minimal static type system.
 
 ### 4.1 Primitive types
 
-- `عدد32` — 32-bit signed integer (maps to Wasm `i32`)
+- `عدد٣٢` — 32-bit signed integer (maps to Wasm `i32`)
 - `منطقي` — boolean (maps to Wasm `i32`, values restricted to 0/1)
 - `نص` — **not a general runtime type**; only string literals used with `اطبع`
 
@@ -85,7 +85,7 @@ Assigning to an immutable binding MUST be a compile-time error.
 ### 5.4 Shadowing (minimal compromise)
 
 - Shadowing is allowed **only across scopes**.
-  - Declaring `دع س: عدد32 = ...` inside a nested block is allowed even if `س` exists in an outer scope.
+  - Declaring `دع س: عدد٣٢ = ...` inside a nested block is allowed even if `س` exists in an outer scope.
 - Redeclaring the same name within the **same scope** is a compile-time error.
 
 ## 6. Statements
@@ -97,7 +97,7 @@ Assigning to an immutable binding MUST be a compile-time error.
 اطبع "<string literal>"
 ```
 
-- If printing an expression, the expression type MUST be `عدد32` or `منطقي`.
+- If printing an expression, the expression type MUST be `عدد٣٢` or `منطقي`.
 - When printing `منطقي`, the implementation SHOULD print `صح` for true and `خطأ` for false (presentation only; runtime representation remains `i32`).
 
 ### 6.2 If / Elif / Else
@@ -153,7 +153,7 @@ Using either outside a loop MUST be a compile-time error.
 Python-style definition:
 
 ```
-دالة الاسم(ا: عدد32, ب: عدد32) -> عدد32:
+دالة الاسم(ا: عدد٣٢, ب: عدد٣٢) -> عدد٣٢:
     <statements>
 ```
 
@@ -181,10 +181,10 @@ Rules:
 
 ### 8.2 Operators
 
-Arithmetic (only `عدد32` operands):
+Arithmetic (only `عدد٣٢` operands):
 - `+ - * /`
 
-Comparisons (only `عدد32` operands, result is `منطقي`):
+Comparisons (only `عدد٣٢` operands, result is `منطقي`):
 - `== != < > <= >=`
 
 Boolean operators (only `منطقي` operands, result is `منطقي`):
@@ -199,7 +199,7 @@ Boolean operators (only `منطقي` operands, result is `منطقي`):
 
 ## 10. Wasm Mapping (WAT-compatible)
 
-- `عدد32` and `منطقي` compile to Wasm `i32`.
+- `عدد٣٢` and `منطقي` compile to Wasm `i32`.
 - Each Rimal function compiles to a Wasm function with `(param i32 ...)` and optional `(result i32)`.
 - Control flow uses structured Wasm constructs: `if`, `block`, `loop`, `br`, `br_if`.
 - Printing uses host imports:

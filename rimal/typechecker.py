@@ -220,14 +220,14 @@ class TypeChecker:
                 lt = self._check_expr(e.left, scopes=scopes)
                 rt = self._check_expr(e.right, scopes=scopes)
                 if lt != "i32" or rt != "i32":
-                    self.error("Arithmetic operators expect عدد32 operands", e.line, e.col)
+                    self.error("Arithmetic operators expect عدد٣٢ operands", e.line, e.col)
                 self.expr_types[id(e)] = "i32"
                 return "i32"
             if op in ("==", "!=", "<", ">", "<=", ">="):
                 lt = self._check_expr(e.left, scopes=scopes)
                 rt = self._check_expr(e.right, scopes=scopes)
                 if lt != "i32" or rt != "i32":
-                    self.error("Comparison operators expect عدد32 operands", e.line, e.col)
+                    self.error("Comparison operators expect عدد٣٢ operands", e.line, e.col)
                 self.expr_types[id(e)] = "bool"
                 return "bool"
             self.error(f"Unknown operator: {op}", e.line, e.col)
