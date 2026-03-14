@@ -146,8 +146,4 @@ Cursor/VS Code does not natively force RTL layout for code editors. This repo in
 - Comments: supported as `# ...` (line or inline)
 - No WASI / file I/O
 
-## Roadmap (post v0.1)
-
-- Better diagnostics (source snippets)
-- More standard library host imports
 
