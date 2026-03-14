@@ -2,6 +2,8 @@
 
 Rimal is a minimal Arabic language that compiles to WebAssembly. Coded entirely by an AI.
 
+[Blog post](https://blog.sherif.page/posts/rimal-arabic-first-language-compiling-to-webassembly/)
+
 ## Overview
 
 - **Language**: Rimal (`.rml`)
